@@ -46,5 +46,4 @@ func Start(h ApiHandler) {
 	response.Success = res
 	out, _ := json.Marshal(response)
 	fmt.Println(string(out))
-	os.Exit(0)
 }
