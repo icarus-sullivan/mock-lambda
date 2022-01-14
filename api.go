@@ -21,6 +21,13 @@ type Payload struct {
 	Success events.APIGatewayProxyResponse `json:"success,omitempty"`
 }
 
+func parse(json string) string {
+	// When we get this env value it's escaped in a way javascript understands but not
+	// go
+	// 	- unescape to a single backslash
+	return strings.ReplaceAll(json, "\\\\", "\\")
+}
+
 func Start(h ApiHandler) {
 	response := Response{
 		Payload: Payload{},
@@ -29,7 +36,7 @@ func Start(h ApiHandler) {
 	envEvent := os.Getenv("LAMBDA_EVENT")
 
 	// JSON.stringify escapes this data so we want to unescape to a single backslash
-	sanitizedEvent := strings.ReplaceAll(envEvent, "\\\\", "\\")
+	sanitizedEvent := parse(envEvent)
 
 	fmt.Println("envEvent", sanitizedEvent)
 	var event events.APIGatewayProxyRequest
@@ -40,6 +47,9 @@ func Start(h ApiHandler) {
 		fmt.Println(string(out))
 		os.Exit(1)
 	}
+	// {"awsRequestId":"ckydzwmfh0002impyhfafadvi","callbackWaitsForEmptyEventLoop":true,"clientContext":null,"functionName":"oauth-api2-dev-forgot-password","functionVersion":"$LATEST","invokedFunctionArn":"offline_invokedFunctionArn_for_oauth-api2-dev-forgot-password","logGroupName":"offline_logGroupName_for_oauth-api2-dev-forgot-password","logStreamName":"offline_logStreamName_for_oauth-api2-dev-forgot-password","memoryLimitInMB":"128"}
+
+	// lambdacontext.NewContext(context.Background(), &lambdacontext.LambdaContext{})
 
 	res, err := h(context.Background(), event)
 	if err != nil {
