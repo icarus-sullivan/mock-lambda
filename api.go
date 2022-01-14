@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
 type ApiHandler func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)
@@ -21,7 +22,7 @@ type Payload struct {
 	Success events.APIGatewayProxyResponse `json:"success,omitempty"`
 }
 
-func parse(json string) string {
+func sanitize(json string) string {
 	// When we get this env value it's escaped in a way javascript understands but not
 	// go
 	// 	- unescape to a single backslash
@@ -33,12 +34,8 @@ func Start(h ApiHandler) {
 		Payload: Payload{},
 	}
 
-	envEvent := os.Getenv("LAMBDA_EVENT")
+	sanitizedEvent := sanitize(os.Getenv("LAMBDA_EVENT"))
 
-	// JSON.stringify escapes this data so we want to unescape to a single backslash
-	sanitizedEvent := parse(envEvent)
-
-	fmt.Println("envEvent", sanitizedEvent)
 	var event events.APIGatewayProxyRequest
 	err := json.Unmarshal([]byte(sanitizedEvent), &event)
 	if err != nil {
@@ -47,11 +44,23 @@ func Start(h ApiHandler) {
 		fmt.Println(string(out))
 		os.Exit(1)
 	}
-	// {"awsRequestId":"ckydzwmfh0002impyhfafadvi","callbackWaitsForEmptyEventLoop":true,"clientContext":null,"functionName":"oauth-api2-dev-forgot-password","functionVersion":"$LATEST","invokedFunctionArn":"offline_invokedFunctionArn_for_oauth-api2-dev-forgot-password","logGroupName":"offline_logGroupName_for_oauth-api2-dev-forgot-password","logStreamName":"offline_logStreamName_for_oauth-api2-dev-forgot-password","memoryLimitInMB":"128"}
 
-	// lambdacontext.NewContext(context.Background(), &lambdacontext.LambdaContext{})
+	contextEvent := sanitize(os.Getenv("LAMBDA_CONTEXT"))
+	ctxArgs := map[string]interface{}{}
+	err = json.Unmarshal([]byte(contextEvent), &ctxArgs)
+	if err != nil {
+		response.Payload.Error = err.Error()
+		out, _ := json.Marshal(response)
+		fmt.Println(string(out))
+		os.Exit(1)
+	}
 
-	res, err := h(context.Background(), event)
+	ctx := lambdacontext.NewContext(context.Background(), &lambdacontext.LambdaContext{
+		AwsRequestID:       ctxArgs["awsRequestId"].(string),
+		InvokedFunctionArn: ctxArgs["invokedFunctionArn"].(string),
+	})
+
+	res, err := h(ctx, event)
 	if err != nil {
 		response.Payload.Error = err.Error()
 		out, _ := json.Marshal(response)
