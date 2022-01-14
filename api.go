@@ -13,12 +13,18 @@ import (
 type ApiHandler func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)
 
 type Response struct {
+	Payload Payload `json:"offline_payload"`
+}
+
+type Payload struct {
 	Error   string                         `json:"error,omitempty"`
 	Success events.APIGatewayProxyResponse `json:"success,omitempty"`
 }
 
 func Start(h ApiHandler) {
-	response := Response{}
+	response := Response{
+		Payload: Payload{},
+	}
 
 	envEvent := os.Getenv("LAMBDA_EVENT")
 
@@ -29,7 +35,7 @@ func Start(h ApiHandler) {
 	var event events.APIGatewayProxyRequest
 	err := json.Unmarshal([]byte(sanitizedEvent), &event)
 	if err != nil {
-		response.Error = err.Error()
+		response.Payload.Error = err.Error()
 		out, _ := json.Marshal(response)
 		fmt.Println(string(out))
 		os.Exit(1)
@@ -37,13 +43,13 @@ func Start(h ApiHandler) {
 
 	res, err := h(context.Background(), event)
 	if err != nil {
-		response.Error = err.Error()
+		response.Payload.Error = err.Error()
 		out, _ := json.Marshal(response)
 		fmt.Println(string(out))
 		os.Exit(1)
 	}
 
-	response.Success = res
+	response.Payload.Success = res
 	out, _ := json.Marshal(response)
 	fmt.Println(string(out))
 }
