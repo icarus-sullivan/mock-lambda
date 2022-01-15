@@ -2,29 +2,26 @@ package lambda
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-func Api(h func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)) Response {
+func api(h func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)) Response {
 	response := Response{
 		Payload: Payload{},
 	}
 
-	sanitizedEvent := SanitizeJSON(os.Getenv("LAMBDA_EVENT"))
 	event := events.APIGatewayProxyRequest{}
-	err := json.Unmarshal([]byte(sanitizedEvent), &event)
+	err := decode(os.Getenv("LAMBDA_EVENT"), event)
 	if err != nil {
 		response.Payload.Error = err.Error()
 		return response
 	}
 
-	contextEvent := SanitizeJSON(os.Getenv("LAMBDA_CONTEXT"))
 	ctxArgs := map[string]interface{}{}
-	err = json.Unmarshal([]byte(contextEvent), &ctxArgs)
+	err = decode(os.Getenv("LAMBDA_CONTEXT"), ctxArgs)
 	if err != nil {
 		response.Payload.Error = err.Error()
 		return response
