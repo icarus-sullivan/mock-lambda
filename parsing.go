@@ -14,7 +14,7 @@ func sanitize(src string) string {
 
 func decode(src string, target interface{}) error {
 	sanitizedEvent := sanitize(src)
-	err := json.Unmarshal([]byte(sanitizedEvent), &target)
+	err := json.Unmarshal([]byte(sanitizedEvent), target)
 	if err != nil {
 		return err
 	}

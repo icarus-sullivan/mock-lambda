@@ -14,14 +14,14 @@ func api(h func(ctx context.Context, request events.APIGatewayProxyRequest) (eve
 	}
 
 	event := events.APIGatewayProxyRequest{}
-	err := decode(os.Getenv("LAMBDA_EVENT"), event)
+	err := decode(os.Getenv("LAMBDA_EVENT"), &event)
 	if err != nil {
 		response.Payload.Error = err.Error()
 		return response
 	}
 
 	ctxArgs := map[string]interface{}{}
-	err = decode(os.Getenv("LAMBDA_CONTEXT"), ctxArgs)
+	err = decode(os.Getenv("LAMBDA_CONTEXT"), &ctxArgs)
 	if err != nil {
 		response.Payload.Error = err.Error()
 		return response

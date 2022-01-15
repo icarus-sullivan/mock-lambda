@@ -12,7 +12,7 @@ func token(h func(request events.APIGatewayCustomAuthorizerRequest) (events.APIG
 	}
 
 	event := events.APIGatewayCustomAuthorizerRequest{}
-	err := decode(os.Getenv("LAMBDA_EVENT"), event)
+	err := decode(os.Getenv("LAMBDA_EVENT"), &event)
 	if err != nil {
 		response.Payload.Error = err.Error()
 		return response
@@ -34,7 +34,7 @@ func request(h func(request events.APIGatewayCustomAuthorizerRequestTypeRequest)
 	}
 
 	event := events.APIGatewayCustomAuthorizerRequestTypeRequest{}
-	err := decode(os.Getenv("LAMBDA_EVENT"), event)
+	err := decode(os.Getenv("LAMBDA_EVENT"), &event)
 	if err != nil {
 		response.Payload.Error = err.Error()
 		return response
