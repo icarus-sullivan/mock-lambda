@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-type ApiLambda func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)
-
 type ApiResponse struct {
 	ApiPayload ApiPayload `json:"offline_payload"`
 }
@@ -21,7 +19,7 @@ type ApiPayload struct {
 	Success events.APIGatewayProxyResponse `json:"success,omitempty"`
 }
 
-func ApiHandler(h ApiLambda) {
+func ApiHandler(h func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)) {
 	response := ApiResponse{
 		ApiPayload: ApiPayload{},
 	}

@@ -8,8 +8,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-type AuthorizerLambda func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error)
-
 type AuthorizerResponse struct {
 	AuthorizerPayload AuthorizerPayload `json:"offline_payload"`
 }
@@ -19,7 +17,7 @@ type AuthorizerPayload struct {
 	Success events.APIGatewayCustomAuthorizerResponse `json:"success,omitempty"`
 }
 
-func AuthorizerHandler(h AuthorizerLambda) {
+func AuthorizerHandler(h func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error)) {
 	response := AuthorizerResponse{
 		AuthorizerPayload: AuthorizerPayload{},
 	}
