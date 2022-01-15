@@ -3,7 +3,6 @@ package lambda
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -39,12 +38,9 @@ func Api(h func(ctx context.Context, request events.APIGatewayProxyRequest) (eve
 	res, err := h(ctx, event)
 	if err != nil {
 		response.Payload.Error = err.Error()
-		out, _ := json.Marshal(response)
-		fmt.Println(string(out))
-		os.Exit(1)
+		return response
 	}
 
 	response.Payload.Success = res
-	out, _ := json.Marshal(response)
-	fmt.Println(string(out))
+	return response
 }
