@@ -2,8 +2,9 @@ package lambda
 
 import (
 	"context"
-	"github.com/aws/aws-lambda-go/events"
 	"testing"
+
+	"github.com/aws/aws-lambda-go/events"
 )
 
 func TestStart_DeterminesSQSInvocation(t *testing.T) {
@@ -23,12 +24,12 @@ func TestStart_DeterminesSQSInvocation(t *testing.T) {
 		return Response{}
 	}}
 
-	err := ml.start(func(ctx context.Context, request events.SQSEvent) error {
+	response := ml.start(func(ctx context.Context, request events.SQSEvent) error {
 		return nil
 	})
 
-	if err != nil {
-		t.Error(err)
+	if response.Payload.Error != "" {
+		t.Error(response.Payload.Error)
 		t.Fail()
 	}
 }
@@ -50,12 +51,12 @@ func TestStart_DeterminesAPIInvocation(t *testing.T) {
 		return Response{}
 	}}
 
-	err := ml.start(func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	response := ml.start(func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		return events.APIGatewayProxyResponse{}, nil
 	})
 
-	if err != nil {
-		t.Error(err)
+	if response.Payload.Error != "" {
+		t.Error(response.Payload.Error)
 		t.Fail()
 	}
 }
@@ -77,12 +78,12 @@ func TestStart_DeterminesRequestInvocation(t *testing.T) {
 		return Response{}
 	}}
 
-	err := ml.start(func(request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
+	response := ml.start(func(request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 		return events.APIGatewayCustomAuthorizerResponse{}, nil
 	})
 
-	if err != nil {
-		t.Error(err)
+	if response.Payload.Error != "" {
+		t.Error(response.Payload.Error)
 		t.Fail()
 	}
 }
@@ -104,12 +105,12 @@ func TestStart_DeterminesTokenInvocation(t *testing.T) {
 		return Response{}
 	}}
 
-	err := ml.start(func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
+	response := ml.start(func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 		return events.APIGatewayCustomAuthorizerResponse{}, nil
 	})
 
-	if err != nil {
-		t.Error(err)
+	if response.Payload.Error != "" {
+		t.Error(response.Payload.Error)
 		t.Fail()
 	}
 }

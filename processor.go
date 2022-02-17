@@ -3,7 +3,6 @@ package lambda
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -27,43 +26,40 @@ type MockLambda struct {
 	sqs     func(h func(ctx context.Context, request events.SQSEvent) error) Response
 }
 
-func (ml *MockLambda) start(h interface{}) error {
+func (ml *MockLambda) start(h interface{}) Response {
 	response := Response{}
 
 	types := reflect.TypeOf(h)
 	inputCount := types.NumIn()
-
 	inputTypes := make([]string, inputCount)
 
 	for i := 0; i < inputCount; i++ {
 		inputTypes[i] = types.In(i).String()
 	}
 
-	fmt.Println(inputTypes)
-
-	if len(inputTypes) == 2 && inputTypes[0] == "context.Context" && inputTypes[1] == "events.APIGatewayProxyRequest" {
+	if inputCount == 2 && inputTypes[0] == "context.Context" && inputTypes[1] == "events.APIGatewayProxyRequest" {
 		response = ml.api(h.(func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)))
-	} else if len(inputTypes) == 1 && inputTypes[0] == "events.APIGatewayCustomAuthorizerRequest" {
+	} else if inputCount == 1 && inputTypes[0] == "events.APIGatewayCustomAuthorizerRequest" {
 		response = ml.token(h.(func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error)))
-	} else if len(inputTypes) == 1 && inputTypes[0] == "events.APIGatewayCustomAuthorizerRequestTypeRequest" {
+	} else if inputCount == 1 && inputTypes[0] == "events.APIGatewayCustomAuthorizerRequestTypeRequest" {
 		response = ml.request(h.(func(request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error)))
-	} else if len(inputTypes) == 2 && inputTypes[0] == "context.Context" && inputTypes[1] == "events.SQSEvent" {
+	} else if inputCount == 2 && inputTypes[0] == "context.Context" && inputTypes[1] == "events.SQSEvent" {
 		response = ml.sqs(h.(func(ctx context.Context, request events.SQSEvent) error))
 	} else {
-		return errors.New("no handler found for method signature " + strings.Join(inputTypes, ", "))
+		response.Payload.Error = "no handler found for method signature func(" + strings.Join(inputTypes, ", ") + ")"
 	}
 
-	out, _ := json.Marshal(response)
-	fmt.Println(string(out))
-
-	return nil
+	return response
 }
 
 func Start(h interface{}) {
 	ml := MockLambda{api: api, token: token, request: request, sqs: sqs}
-	err := ml.start(h)
+	response := ml.start(h)
 
+	out, err := json.Marshal(response)
 	if err != nil {
-		fmt.Errorf(err.Error())
+		fmt.Println(err.Error())
 	}
+
+	fmt.Println(string(out))
 }
