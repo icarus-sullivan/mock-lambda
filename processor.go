@@ -3,8 +3,10 @@ package lambda
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"os"
+	"reflect"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 )
@@ -18,26 +20,50 @@ type Payload struct {
 	Success interface{} `json:"success,omitempty"`
 }
 
-func Start(h interface{}) {
+type MockLambda struct {
+	api     func(h func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)) Response
+	token   func(h func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error)) Response
+	request func(h func(request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error)) Response
+	sqs     func(h func(ctx context.Context, request events.SQSEvent) error) Response
+}
+
+func (ml *MockLambda) start(h interface{}) error {
 	response := Response{}
 
-	authorizer := os.Getenv("IS_LAMBDA_AUTHORIZER")
-	requestAuthorizer := os.Getenv("IS_LAMBDA_REQUEST_AUTHORIZER")
-	tokenAuthorizer := os.Getenv("IS_LAMBDA_TOKEN_AUTHORIZER")
+	types := reflect.TypeOf(h)
+	inputCount := types.NumIn()
 
-	// Most common - probably
-	if authorizer != "true" {
-		response = api(h.(func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)))
+	inputTypes := make([]string, inputCount)
+
+	for i := 0; i < inputCount; i++ {
+		inputTypes[i] = types.In(i).String()
 	}
 
-	if authorizer == "true" && tokenAuthorizer == "true" {
-		response = token(h.(func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error)))
-	}
+	fmt.Println(inputTypes)
 
-	if authorizer == "true" && requestAuthorizer == "true" {
-		response = request(h.(func(request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error)))
+	if len(inputTypes) == 2 && inputTypes[0] == "context.Context" && inputTypes[1] == "events.APIGatewayProxyRequest" {
+		response = ml.api(h.(func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)))
+	} else if len(inputTypes) == 1 && inputTypes[0] == "events.APIGatewayCustomAuthorizerRequest" {
+		response = ml.token(h.(func(request events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayCustomAuthorizerResponse, error)))
+	} else if len(inputTypes) == 1 && inputTypes[0] == "events.APIGatewayCustomAuthorizerRequestTypeRequest" {
+		response = ml.request(h.(func(request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error)))
+	} else if len(inputTypes) == 2 && inputTypes[0] == "context.Context" && inputTypes[1] == "events.SQSEvent" {
+		response = ml.sqs(h.(func(ctx context.Context, request events.SQSEvent) error))
+	} else {
+		return errors.New("no handler found for method signature " + strings.Join(inputTypes, ", "))
 	}
 
 	out, _ := json.Marshal(response)
 	fmt.Println(string(out))
+
+	return nil
+}
+
+func Start(h interface{}) {
+	ml := MockLambda{api: api, token: token, request: request, sqs: sqs}
+	err := ml.start(h)
+
+	if err != nil {
+		fmt.Errorf(err.Error())
+	}
 }
